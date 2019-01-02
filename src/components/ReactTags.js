@@ -36,6 +36,8 @@ class ReactTags extends Component {
     handleDelete: PropTypes.func,
     handleAddition: PropTypes.func,
     handleDrag: PropTypes.func,
+    enableEdit: PropTypes.bool,
+    onTagUpdate: PropTypes.func,
     handleFilterSuggestions: PropTypes.func,
     handleTagClick: PropTypes.func,
     allowDeleteFromEmptyInput: PropTypes.bool,
@@ -74,6 +76,8 @@ class ReactTags extends Component {
     handleAddition: noop,
     allowDeleteFromEmptyInput: true,
     allowAdditionFromPaste: true,
+    enableEdit: false,
+    onTagUpdate: noop,
     resetInputOnDelete: true,
     autocomplete: false,
     readOnly: false,
@@ -89,12 +93,16 @@ class ReactTags extends Component {
       suggestions,
       query: '',
       isFocused: false,
+      editing: false,
+      editValue: null,
+      editIndex: null,
       selectedIndex: -1,
       selectionMode: false,
       classNames: { ...DEFAULT_CLASSNAMES, ...classNames },
     };
 
     this.handleFocus = this.handleFocus.bind(this);
+    this.editTag = this.editTag.bind(this);
     this.handleBlur = this.handleBlur.bind(this);
     this.handleKeyDown = this.handleKeyDown.bind(this);
     this.handleChange = this.handleChange.bind(this);
@@ -147,11 +155,11 @@ class ReactTags extends Component {
   handleTagClick(i, e) {
     if (this.props.handleTagClick) {
       this.props.handleTagClick(i, e);
-    }
-    if (!this.props.resetInputOnDelete) {
-      this.textInput && this.textInput.focus();
-    } else {
-      this.resetAndFocusInput();
+      if (!this.props.resetInputOnDelete) {
+        this.textInput && this.textInput.focus();
+      } else {
+        this.resetAndFocusInput();
+      }
     }
   }
 
@@ -169,9 +177,9 @@ class ReactTags extends Component {
       query: query,
       suggestions: suggestions,
       selectedIndex:
-        selectedIndex >= suggestions.length
-          ? suggestions.length - 1
-          : selectedIndex,
+      selectedIndex >= suggestions.length
+        ? suggestions.length - 1
+        : selectedIndex,
     });
   }
 
@@ -217,9 +225,9 @@ class ReactTags extends Component {
       }
 
       const selectedQuery =
-        selectionMode && selectedIndex !== -1
-          ? suggestions[selectedIndex]
-          : { id: query, [this.props.labelField]: query };
+      selectionMode && selectedIndex !== -1
+        ? suggestions[selectedIndex]
+        : { id: query, [this.props.labelField]: query };
 
       if (selectedQuery !== '') {
         this.addTag(selectedQuery);
@@ -240,7 +248,7 @@ class ReactTags extends Component {
       e.preventDefault();
       this.setState({
         selectedIndex:
-          selectedIndex <= 0 ? suggestions.length - 1 : selectedIndex - 1,
+        selectedIndex <= 0 ? suggestions.length - 1 : selectedIndex - 1,
         selectionMode: true,
       });
     }
@@ -250,9 +258,9 @@ class ReactTags extends Component {
       e.preventDefault();
       this.setState({
         selectedIndex:
-          suggestions.length === 0
-            ? -1
-            : (selectedIndex + 1) % suggestions.length,
+        suggestions.length === 0
+          ? -1
+          : (selectedIndex + 1) % suggestions.length,
         selectionMode: true,
       });
     }
@@ -331,6 +339,58 @@ class ReactTags extends Component {
       selectionMode: true,
     });
   }
+  editTag(index)
+  {
+    if(this.props.enableEdit)
+    {
+      let state = {
+        editing : true,
+        editIndex : index,
+        editValue : this.props.tags[index][this.props.labelField],
+      };
+      this.setState(state);
+    }
+  }
+  editInputChange(event)
+  {
+    this.setState({
+      editValue: event.target.value,
+    });
+  }
+  onTagUpdate()
+  {
+    if(this.state.editValue !== this.props.tags[this.state.editIndex][this.props.labelField])
+    {
+      if(this.props.onTagUpdate)
+      {
+        let obj = {};
+        obj[this.props.labelField] = this.state.editValue;
+        obj['id'] = this.state.editValue;
+        this.props.onTagUpdate(this.state.editIndex, obj);
+        this.setState({
+          editing: false,
+          editIndex: null,
+          editValue: null,
+        });
+      }
+    }
+    else
+    {
+      this.setState({
+        editing: false,
+        editIndex: null,
+        editValue: null,
+      });
+    }
+  }
+  onTagUpdateKeyDown(e)
+  {
+    if(e.keyCode === KEYS.ENTER)
+    {
+      this.onTagUpdate();
+    }
+
+  }
 
   moveTag(dragIndex, hoverIndex) {
     const tags = this.props.tags;
@@ -354,21 +414,24 @@ class ReactTags extends Component {
     const { classNames } = this.state;
     const moveTag = allowDragDrop ? this.moveTag : null;
     return tags.map((tag, index) => {
-      return (
-        <Tag
-          key={`${tag.id}-${index}`}
-          index={index}
-          tag={tag}
-          labelField={labelField}
-          onDelete={this.handleDelete.bind(this, index)}
-          moveTag={moveTag}
-          removeComponent={removeComponent}
-          onTagClicked={this.handleTagClick.bind(this, index)}
-          readOnly={readOnly}
-          classNames={classNames}
-          allowDragDrop={allowDragDrop}
-        />
-      );
+      return this.state.editIndex !== index ?
+        (
+          <Tag
+            key={`${tag.id}-${index}`}
+            index={index}
+            tag={tag}
+            editTag={this.editTag.bind(this, index)}
+            labelField={labelField}
+            enableEdit={this.props.enableEdit ? this.props.enableEdit : false}
+            onDelete={this.handleDelete.bind(this, index)}
+            moveTag={moveTag}
+            removeComponent={removeComponent}
+            onTagClicked={this.handleTagClick.bind(this, index)}
+            readOnly={readOnly}
+            classNames={classNames}
+            allowDragDrop={allowDragDrop}
+          />
+        ) : null;
     });
   };
 
@@ -384,6 +447,21 @@ class ReactTags extends Component {
       inputId = this.props.id,
       maxLength = this.props.maxLength;
 
+    const editingTag = this.state.editing ? (
+      <div className={this.state.classNames.tagInput}>
+        <input
+          className={this.state.classNames.tagInputField}
+          type="text"
+          aria-label={placeholder}
+          onChange={this.editInputChange.bind(this)}
+          onBlur={this.onTagUpdate.bind(this)}
+          onKeyDown={this.onTagUpdateKeyDown.bind(this)}
+          id="editingInput"
+          name="editingInput"
+          value={this.state.editValue}
+        />
+      </div>
+    ) : null;
     const tagInput = !this.props.readOnly ? (
       <div className={this.state.classNames.tagInput}>
         <input
@@ -419,14 +497,15 @@ class ReactTags extends Component {
         />
       </div>
     ) : null;
-
     return (
       <div className={ClassNames(this.state.classNames.tags, 'react-tags-wrapper')}>
         <div className={this.state.classNames.selected}>
-          {tagItems}
-          {this.props.inline && tagInput}
+          {this.state.editing ? tagItems.slice(0,this.state.editIndex) : tagItems}
+          {this.state.editing && editingTag}
+          {this.state.editing ? tagItems.slice(this.state.editIndex, this.props.tags.length) : ''}
+          {this.props.inline && !this.state.editing && tagInput}
         </div>
-        {!this.props.inline && tagInput}
+        {!this.props.inline && !this.state.editing && tagInput}
       </div>
     );
   }

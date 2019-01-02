@@ -10,7 +10,7 @@ import {
   dropCollect,
 } from './DragAndDropHelper';
 import { canDrag } from './utils';
-
+import noop from 'lodash/noop';
 import RemoveComponent from './RemoveComponent';
 
 const ItemTypes = { TAG: 'tag' };
@@ -22,6 +22,7 @@ class Tag extends Component {
     const {
       connectDragSource,
       isDragging,
+      enableEdit,
       connectDropTarget,
       readOnly,
     } = props;
@@ -29,7 +30,8 @@ class Tag extends Component {
     const tagComponent = (
       <span
         className={ClassNames('tag-wrapper', props.classNames.tag, {'opacity-none' : isDragging}, {'cursor-move': canDrag(props)})}
-        onClick={props.onTagClicked}
+        onDoubleClick={enableEdit ? props.editTag : noop}
+        onClick={enableEdit ? noop : props.onTagClicked}
         onKeyDown={props.onTagClicked}>
         {label}
         <RemoveComponent

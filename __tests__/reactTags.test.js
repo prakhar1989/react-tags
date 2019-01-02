@@ -45,6 +45,8 @@ describe('Test ReactTags', () => {
       inline: true,
       handleDelete: noop,
       handleAddition: noop,
+      enableEdit: false,
+      onTagUpdate: noop,
       allowDeleteFromEmptyInput: true,
       allowAdditionFromPaste: true,
       resetInputOnDelete: true,
@@ -65,6 +67,22 @@ describe('Test ReactTags', () => {
       'ReactTags__tagInputField'
     );
     $el.unmount();
+  });
+
+  test('test for check for input in enable Editing', () => {
+    const $el = mount(mockItem({ enableEdit: true }));
+    $el.find('span').simulate('doubleclick');
+    expect($el.find('#editingInput').length).to.equal(1);
+  });
+
+  test('test for the function onTagUpdate to run', () => {
+    const onTagUpdate = spy();
+    const $el = mount(mockItem({ enableEdit: true, onTagUpdate: onTagUpdate }));
+    $el.find('span').simulate('doubleclick');
+    const $input = $el.find('#editingInput');
+    $input.simulate('change', { target: { value: 'Austriaasdf' } });
+    $input.simulate('keyDown', { keyCode: ENTER_ARROW_KEY_CODE });
+    expect(onTagUpdate.calledOnce).to.be.true;
   });
 
   test('should not focus on input if autofocus is false', () => {
@@ -233,7 +251,7 @@ describe('Test ReactTags', () => {
       const tags = [];
       const maxLength = 5;
       const inputValue = 'Thimbleberry';
-      
+
       const $el = mount(
         mockItem({
           handleAddition(tag) {

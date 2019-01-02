@@ -29,6 +29,7 @@ function mockItem(overrides) {
       onDelete: noop,
       readOnly: false,
       allowDragDrop: true,
+      enableEdit: false,
       moveTag: noop,
       classNames: {
         tag: 'tag',
@@ -51,6 +52,14 @@ describe('Tag', () => {
   test('should show cross for removing tag when read-only is false', () => {
     const $el = mount(mockItem());
     expect($el.find('a.remove').length).to.equal(1);
+  });
+
+  test('should change for editing prop and function', () => {
+    const spy = sinon.spy();
+    const $el = mount(mockItem({ enableEdit: true, editTag: spy }));
+    $el.find('span').simulate('doubleclick');
+    expect(spy.calledOnce).to.be.true;
+    spy.resetHistory();
   });
 
   test('should not show cross for removing tag when read-only is true', () => {
@@ -120,20 +129,25 @@ describe('Tag', () => {
 
   [
     { overrideProps: { readOnly: true }, title: 'readOnly is true' },
-    { overrideProps: { allowDragDrop: false }, title: 'allowDragDrop is false' },
+    {
+      overrideProps: { allowDragDrop: false },
+      title: 'allowDragDrop is false',
+    },
   ].forEach((data) => {
     const { title, overrideProps } = data;
     test(`should not be draggable when ${title}`, () => {
-      const root = TestUtils.renderIntoDocument(mockItem({...overrideProps}));
+      const root = TestUtils.renderIntoDocument(mockItem({ ...overrideProps }));
       const backend = root.getManager().getBackend();
       const tag = TestUtils.findRenderedComponentWithType(root, Tag);
       backend.simulateBeginDrag([
         tag.getDecoratedComponentInstance().getHandlerId(),
       ]);
-      const el = TestUtils.scryRenderedDOMComponentsWithClass(root, 'cursor-move');
+      const el = TestUtils.scryRenderedDOMComponentsWithClass(
+        root,
+        'cursor-move'
+      );
       expect(el.length).eq(0);
       expect(tag.getDecoratedComponentInstance().state.isDragging).to.be.false;
     });
   });
-
 });
