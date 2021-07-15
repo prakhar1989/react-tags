@@ -67,7 +67,7 @@
     "eslint-plugin-jsx-a11y": "^6.4.1",
     "eslint-plugin-react": "^7.23.2",
     "jest": "^22.4.4",
-    "jsdom": "^11.12.0",
+    "jsdom": "^16.6.0",
     "node-sass": "^6.0.0",
     "opn": "^6.0.0",
     "prettier": "^2.3.0",
