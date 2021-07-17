@@ -29,6 +29,14 @@
     border: 1px solid #eee;
 }
 
+.ReactTags__editInput {
+    border-radius: 1px;
+}
+
+.ReactTags__editTagInput {
+    display: inline-flex;
+}
+
 /* Styles for selected tags */
 .ReactTags__selected span.ReactTags__tag {
     border: 1px solid #ddd;

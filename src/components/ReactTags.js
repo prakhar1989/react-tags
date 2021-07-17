@@ -39,6 +39,7 @@ class ReactTags extends Component {
     ]),
     handleDelete: PropTypes.func,
     handleAddition: PropTypes.func,
+    handleUpdateTag: PropTypes.func,
     handleDrag: PropTypes.func,
     handleFilterSuggestions: PropTypes.func,
     handleTagClick: PropTypes.func,
@@ -67,6 +68,7 @@ class ReactTags extends Component {
     allowUnique: PropTypes.bool,
     renderSuggestion: PropTypes.func,
     inputProps: PropTypes.object,
+    editable: PropTypes.bool,
   };
 
   static defaultProps = {
@@ -87,6 +89,8 @@ class ReactTags extends Component {
     allowDragDrop: true,
     tags: [],
     inputProps: {},
+    handleUpdateTag: noop,
+    editable: false,
   };
 
   constructor(props) {
@@ -108,6 +112,7 @@ class ReactTags extends Component {
       selectedIndex: -1,
       selectionMode: false,
       ariaLiveStatus: '',
+      currentEditIndex: null,
     };
     this.reactTagsRef = createRef();
     this.handleFocus = this.handleFocus.bind(this);
@@ -207,9 +212,16 @@ class ReactTags extends Component {
     });
   }
 
-  handleTagClick(i, e) {
-    if (this.props.handleTagClick) {
-      this.props.handleTagClick(i, e);
+  handleTagClick(i, tag, e) {
+    const { editable, handleTagClick, labelField } = this.props;
+    // const currentTagText=tags[i].text;
+    if (editable) {
+      this.setState({ currentEditIndex: i, query: tag[labelField] }, () => {
+        this.tagInput.focus();
+      });
+    }
+    if (handleTagClick) {
+      handleTagClick(i, e);
     }
   }
 
@@ -252,7 +264,7 @@ class ReactTags extends Component {
         this.textInput.value = '';
       }
     }
-    this.setState({ isFocused: false });
+    this.setState({ isFocused: false, currentEditIndex: null });
   }
 
   handleKeyDown(e) {
@@ -266,6 +278,7 @@ class ReactTags extends Component {
         selectedIndex: -1,
         selectionMode: false,
         suggestions: [],
+        currentEditIndex: null,
       });
     }
 
@@ -346,6 +359,7 @@ class ReactTags extends Component {
 
   addTag = (tag) => {
     const { tags, labelField, allowUnique } = this.props;
+    const { currentEditIndex } = this.state;
     if (!tag.id || !tag[labelField]) {
       return;
     }
@@ -367,13 +381,17 @@ class ReactTags extends Component {
     }
 
     // call method to add
-    this.props.handleAddition(tag);
+    if (currentEditIndex !== null && this.props.handleUpdateTag)
+      this.props.handleUpdateTag(currentEditIndex, tag);
+    else
+      this.props.handleAddition(tag);
 
     // reset the state
     this.setState({
       query: '',
       selectionMode: false,
       selectedIndex: -1,
+      currentEditIndex: null,
     });
 
     this.resetAndFocusInput();
@@ -403,17 +421,37 @@ class ReactTags extends Component {
 
   getTagItems = () => {
     const {
-      classNames,
       tags,
       labelField,
       removeComponent,
       readOnly,
       allowDragDrop,
     } = this.props;
+    const classNames = { ...DEFAULT_CLASSNAMES, ...this.props.classNames };
 
+    const { currentEditIndex, query } = this.state;
     const moveTag = allowDragDrop ? this.moveTag : null;
     return tags.map((tag, index) => {
-      return (
+      if (currentEditIndex === index) {
+        return (
+          <div className={classNames.editTagInput}>
+            <input
+              ref={(input) => {
+                this.tagInput = input;
+              }}
+              key={index}
+              d-index={index}
+              onFocus={this.handleFocus}
+              value={query}
+              onChange={this.handleChange}
+              onKeyDown={this.handleKeyDown}
+              onBlur={this.handleBlur}
+              className={classNames.editTagInputField}
+              onPaste={this.handlePaste}
+            />
+          </div>
+        );
+      } else return (
         <Tag
           key={index}
           index={index}
@@ -422,9 +460,9 @@ class ReactTags extends Component {
           onDelete={this.handleDelete.bind(this, index)}
           moveTag={moveTag}
           removeComponent={removeComponent}
-          onTagClicked={this.handleTagClick.bind(this, index)}
+          onTagClicked={this.handleTagClick.bind(this, index, tag)}
           readOnly={readOnly}
-          classNames={{ ...DEFAULT_CLASSNAMES, ...classNames }}
+          classNames={classNames}
           allowDragDrop={allowDragDrop}
         />
       );

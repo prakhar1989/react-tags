@@ -243,8 +243,15 @@ class App extends React.Component {
     this.handleAddition = this.handleAddition.bind(this);
     this.handleDrag = this.handleDrag.bind(this);
     this.handleTagClick = this.handleTagClick.bind(this);
+    this.handleUpdateTag = this.handleUpdateTag.bind(this);
   }
-
+  handleUpdateTag(i, newTag) {
+    const tags = [...this.state.tags];
+    const updatedTags = tags.slice();
+    updatedTags.splice(i, 1, newTag);
+    // re-render
+    this.setState({ tags: updatedTags });
+  }
   handleDelete(i) {
     const { tags } = this.state;
     this.setState({
@@ -286,7 +293,9 @@ class App extends React.Component {
             handleDrag={this.handleDrag}
             handleTagClick={this.handleTagClick}
             inputFieldPosition="bottom"
+            handleUpdateTag={this.handleUpdateTag}
             autocomplete
+            editable
           />
         </div>
       </div>
